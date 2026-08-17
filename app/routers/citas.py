@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,15 +16,19 @@ ESTADOS_ACTIVOS = (EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA)
 HORAS_MINIMAS_CANCELACION = 24
 
 
+def _se_solapan(inicio_a, fin_a, inicio_b, fin_b) -> bool:
+    """Dos rangos [inicio, fin) se solapan si cada uno empieza antes de que
+    el otro termine. Con '<' estricto, una cita que empieza justo cuando
+    otra termina NO se considera solapamiento (quedan pegadas, no cruzadas).
+    """
+    return inicio_a < fin_b and inicio_b < fin_a
+
+
 def validar_reglas_de_negocio(datos: schemas.CitaCrear, db: Session) -> None:
     """Valida las reglas del dominio antes de crear una cita.
 
-    Cada regla debe lanzar HTTPException(409) con un mensaje explicativo.
-    Se implementan de una en una, activando su prueba correspondiente en
-    tests/test_citas_reglas.py antes de escribir el código (TDD).
+    Cada regla lanza HTTPException(409) con un mensaje explicativo.
 
-    TODO 1 - Solapamiento: el profesional no puede tener otra cita activa
-             que se cruce con el rango [inicio, inicio + duracion_min).
     TODO 2 - Horario laboral: la cita debe caber completa entre
              profesional.hora_inicio y profesional.hora_fin.
     TODO 3 - Fecha pasada: no se permite reservar en el pasado.
@@ -30,6 +36,20 @@ def validar_reglas_de_negocio(datos: schemas.CitaCrear, db: Session) -> None:
     TODO 5 - Cliente ocupado: el cliente no puede tener dos citas activas
              que se solapen entre si.
     """
+    fin_nueva = datos.inicio + timedelta(minutes=datos.duracion_min)
+
+    citas_del_profesional = db.scalars(
+        select(Cita).where(
+            Cita.profesional_id == datos.profesional_id,
+            Cita.estado.in_(ESTADOS_ACTIVOS),
+        )
+    )
+    for cita in citas_del_profesional:
+        if _se_solapan(datos.inicio, fin_nueva, cita.inicio, cita.fin):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"El profesional ya tiene una cita entre {cita.inicio} y {cita.fin}",
+            )
 
 
 @router.post("", response_model=schemas.CitaLeer, status_code=status.HTTP_201_CREATED)

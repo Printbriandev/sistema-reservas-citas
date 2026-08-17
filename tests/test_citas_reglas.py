@@ -11,29 +11,87 @@ Cada una de estas reglas es tambien una fila de la plantilla de casos de prueba
 del documento, y la fuente de los criterios de aceptacion y rechazo.
 """
 
+from datetime import timedelta
+
 import pytest
 
 MOTIVO = "Pendiente: se implementa en pareja siguiendo TDD"
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_rechaza_solapamiento_del_profesional():
+def _crear_cliente(client, email):
+    return client.post(
+        "/clientes",
+        json={"nombre": "Cliente de prueba", "email": email, "telefono": "809-555-0000"},
+    ).json()
+
+
+def test_rechaza_solapamiento_del_profesional(
+    client, cliente_creado, profesional_creado, proximo_dia_laborable
+):
     """REGLA 1 - El profesional no puede tener dos citas que se cruzen.
 
     Dado un profesional con una cita activa de 9:00 a 9:30,
     cuando se intenta agendar otra de 9:15 a 9:45 con el mismo profesional,
     entonces la respuesta es 409 y la segunda cita no se crea.
     """
+    client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": proximo_dia_laborable.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+    otro_cliente = _crear_cliente(client, "solapa1@example.com")
+
+    inicio_solapado = proximo_dia_laborable + timedelta(minutes=15)
+    respuesta = client.post(
+        "/citas",
+        json={
+            "cliente_id": otro_cliente["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": inicio_solapado.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+
+    assert respuesta.status_code == 409
+    assert len(client.get("/citas").json()) == 1
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_permite_cita_pegada_sin_solapar():
+def test_permite_cita_pegada_sin_solapar(
+    client, cliente_creado, profesional_creado, proximo_dia_laborable
+):
     """REGLA 1 (borde) - Una cita que empieza justo cuando termina otra si vale.
 
     Dado un profesional con una cita de 9:00 a 9:30,
     cuando se agenda otra de 9:30 a 10:00,
     entonces la respuesta es 201.
     """
+    client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": proximo_dia_laborable.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+    otro_cliente = _crear_cliente(client, "pegada1@example.com")
+
+    inicio_pegado = proximo_dia_laborable + timedelta(minutes=30)
+    respuesta = client.post(
+        "/citas",
+        json={
+            "cliente_id": otro_cliente["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": inicio_pegado.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+
+    assert respuesta.status_code == 201
 
 
 @pytest.mark.skip(reason=MOTIVO)
@@ -84,14 +142,38 @@ def test_rechaza_cliente_con_dos_citas_simultaneas():
     """
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_una_cita_cancelada_libera_el_espacio():
+def test_una_cita_cancelada_libera_el_espacio(
+    client, cliente_creado, profesional_creado, proximo_dia_laborable
+):
     """REGLA 1 + estados - Las citas canceladas no bloquean el horario.
 
     Dado un profesional con una cita de 9:00 a 9:30 que luego se cancela,
     cuando se agenda otra cita de 9:00 a 9:30,
     entonces la respuesta es 201.
     """
+    primera = client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": proximo_dia_laborable.isoformat(),
+            "duracion_min": 30,
+        },
+    ).json()
+    client.patch(f"/citas/{primera['id']}/cancelar")
+    otro_cliente = _crear_cliente(client, "libera1@example.com")
+
+    respuesta = client.post(
+        "/citas",
+        json={
+            "cliente_id": otro_cliente["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": proximo_dia_laborable.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+
+    assert respuesta.status_code == 201
 
 
 @pytest.mark.skip(reason=MOTIVO)
