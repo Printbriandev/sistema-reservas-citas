@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -29,11 +29,15 @@ def validar_reglas_de_negocio(datos: schemas.CitaCrear, db: Session) -> None:
 
     Cada regla lanza HTTPException(409) con un mensaje explicativo.
 
-    TODO 3 - Fecha pasada: no se permite reservar en el pasado.
     TODO 4 - Duracion: debe ser multiplo de 30 minutos.
     TODO 5 - Cliente ocupado: el cliente no puede tener dos citas activas
              que se solapen entre si.
     """
+    if datos.inicio < datetime.now():
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "No se puede agendar una cita en el pasado"
+        )
+
     fin_nueva = datos.inicio + timedelta(minutes=datos.duracion_min)
 
     citas_del_profesional = db.scalars(

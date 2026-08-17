@@ -140,13 +140,26 @@ def test_rechaza_cita_que_termina_despues_del_cierre(
     assert respuesta.status_code == 409
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_rechaza_cita_en_el_pasado():
+def test_rechaza_cita_en_el_pasado(
+    client, cliente_creado, profesional_creado, proximo_dia_laborable
+):
     """REGLA 3 - No se reserva en el pasado.
 
     Cuando se intenta agendar una cita con fecha de ayer,
     entonces la respuesta es 409.
     """
+    ayer = proximo_dia_laborable - timedelta(days=2)
+    respuesta = client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": ayer.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+
+    assert respuesta.status_code == 409
 
 
 @pytest.mark.skip(reason=MOTIVO)
