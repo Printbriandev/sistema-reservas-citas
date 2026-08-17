@@ -11,9 +11,11 @@ Cada una de estas reglas es tambien una fila de la plantilla de casos de prueba
 del documento, y la fuente de los criterios de aceptacion y rechazo.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
+
+from app.models import Cita, EstadoCita
 
 MOTIVO = "Pendiente: se implementa en pareja siguiendo TDD"
 
@@ -226,12 +228,13 @@ def test_rechaza_cliente_con_dos_citas_simultaneas(
 
 
 def test_una_cita_cancelada_libera_el_espacio(
-    client, cliente_creado, profesional_creado, proximo_dia_laborable
+    client, cliente_creado, profesional_creado, fecha_cancelable
 ):
     """REGLA 1 + estados - Las citas canceladas no bloquean el horario.
 
-    Dado un profesional con una cita de 9:00 a 9:30 que luego se cancela,
-    cuando se agenda otra cita de 9:00 a 9:30,
+    Dado un profesional con una cita que luego se cancela (con anticipacion
+    suficiente para poder cancelarla, Regla 6),
+    cuando se agenda otra cita en ese mismo horario,
     entonces la respuesta es 201.
     """
     primera = client.post(
@@ -239,11 +242,12 @@ def test_una_cita_cancelada_libera_el_espacio(
         json={
             "cliente_id": cliente_creado["id"],
             "profesional_id": profesional_creado["id"],
-            "inicio": proximo_dia_laborable.isoformat(),
+            "inicio": fecha_cancelable.isoformat(),
             "duracion_min": 30,
         },
     ).json()
-    client.patch(f"/citas/{primera['id']}/cancelar")
+    respuesta_cancelar = client.patch(f"/citas/{primera['id']}/cancelar")
+    assert respuesta_cancelar.status_code == 200
     otro_cliente = _crear_cliente(client, "libera1@example.com")
 
     respuesta = client.post(
@@ -251,7 +255,7 @@ def test_una_cita_cancelada_libera_el_espacio(
         json={
             "cliente_id": otro_cliente["id"],
             "profesional_id": profesional_creado["id"],
-            "inicio": proximo_dia_laborable.isoformat(),
+            "inicio": fecha_cancelable.isoformat(),
             "duracion_min": 30,
         },
     )
@@ -259,21 +263,56 @@ def test_una_cita_cancelada_libera_el_espacio(
     assert respuesta.status_code == 201
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_rechaza_cancelacion_sin_anticipacion_minima():
+def test_rechaza_cancelacion_sin_anticipacion_minima(
+    client, sesion, cliente_creado, profesional_creado
+):
     """REGLA 6 - Cancelar exige 24 horas de anticipacion.
 
     Dada una cita que empieza dentro de 2 horas,
     cuando se intenta cancelar,
     entonces la respuesta es 409.
+
+    Se inserta la cita directamente en la base de datos de prueba (en vez
+    de usar POST /citas) para poder ubicarla a solo 2 horas de distancia
+    sin chocar con la Regla 2 (horario laboral), que a esta hora del dia
+    rechazaria la creacion antes de llegar a probar la cancelacion.
     """
+    cita = Cita(
+        cliente_id=cliente_creado["id"],
+        profesional_id=profesional_creado["id"],
+        inicio=datetime.now() + timedelta(hours=2),
+        duracion_min=30,
+        estado=EstadoCita.PENDIENTE,
+    )
+    sesion.add(cita)
+    sesion.commit()
+    sesion.refresh(cita)
+
+    respuesta = client.patch(f"/citas/{cita.id}/cancelar")
+
+    assert respuesta.status_code == 409
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_permite_cancelacion_con_anticipacion_suficiente():
+def test_permite_cancelacion_con_anticipacion_suficiente(
+    client, cliente_creado, profesional_creado, fecha_cancelable
+):
     """REGLA 6 (borde) - Con mas de 24 horas si se puede cancelar.
 
     Dada una cita que empieza dentro de 3 dias,
     cuando se cancela,
     entonces la respuesta es 200 y el estado queda CANCELADA.
     """
+    cita = client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": fecha_cancelable.isoformat(),
+            "duracion_min": 30,
+        },
+    ).json()
+
+    respuesta = client.patch(f"/citas/{cita['id']}/cancelar")
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["estado"] == "CANCELADA"

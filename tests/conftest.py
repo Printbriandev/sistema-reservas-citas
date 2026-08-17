@@ -74,3 +74,12 @@ def proximo_dia_laborable():
     """Manana a las 9:00, dentro del horario laboral por defecto."""
     manana = datetime.now() + timedelta(days=1)
     return datetime.combine(manana.date(), time(9, 0))
+
+
+@pytest.fixture
+def fecha_cancelable():
+    """Un horario a mas de 24 horas de anticipacion, sin importar la hora
+    del dia en que corran las pruebas (a diferencia de proximo_dia_laborable,
+    que solo garantiza que sea manana, no que falten 24h completas)."""
+    en_tres_dias = datetime.now() + timedelta(days=3)
+    return datetime.combine(en_tres_dias.date(), time(9, 0))

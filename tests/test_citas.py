@@ -4,13 +4,16 @@ import pytest
 
 
 @pytest.fixture
-def cita_creada(client, cliente_creado, profesional_creado, proximo_dia_laborable):
+def cita_creada(client, cliente_creado, profesional_creado, fecha_cancelable):
+    """Usa fecha_cancelable (no proximo_dia_laborable) porque esta fixture
+    tambien sirve a las pruebas de cancelacion, que exigen mas de 24h de
+    anticipacion (Regla 6)."""
     respuesta = client.post(
         "/citas",
         json={
             "cliente_id": cliente_creado["id"],
             "profesional_id": profesional_creado["id"],
-            "inicio": proximo_dia_laborable.isoformat(),
+            "inicio": fecha_cancelable.isoformat(),
             "duracion_min": 30,
         },
     )

@@ -146,8 +146,15 @@ def cancelar_cita(cita_id: int, db: Session = Depends(get_db)):
             status.HTTP_409_CONFLICT,
             f"No se puede cancelar una cita {cita.estado.value}",
         )
-    # TODO 6 - Anticipacion minima: rechazar si faltan menos de
-    #          HORAS_MINIMAS_CANCELACION horas para el inicio.
+    # Regla 6: cancelar exige un minimo de anticipacion. Evita que un
+    # cliente/profesional deje una cita colgada a ultima hora.
+    tiempo_restante = cita.inicio - datetime.now()
+    if tiempo_restante < timedelta(hours=HORAS_MINIMAS_CANCELACION):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Solo se puede cancelar con al menos {HORAS_MINIMAS_CANCELACION} "
+            "horas de anticipacion",
+        )
     cita.estado = EstadoCita.CANCELADA
     db.commit()
     db.refresh(cita)
