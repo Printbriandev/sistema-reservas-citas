@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+.pytest_cache/
+.idea/
+.vscode/
+
+# Documento de la consigna: no se publica en el repositorio
+Programacion III. Proyecto FInal. Kelyn Tejada.pdf
