@@ -28,9 +28,6 @@ def validar_reglas_de_negocio(datos: schemas.CitaCrear, db: Session) -> None:
     """Valida las reglas del dominio antes de crear una cita.
 
     Cada regla lanza HTTPException(409) con un mensaje explicativo.
-
-    TODO 5 - Cliente ocupado: el cliente no puede tener dos citas activas
-             que se solapen entre si.
     """
     if datos.inicio < datetime.now():
         raise HTTPException(
@@ -57,6 +54,22 @@ def validar_reglas_de_negocio(datos: schemas.CitaCrear, db: Session) -> None:
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
                 f"El profesional ya tiene una cita entre {cita.inicio} y {cita.fin}",
+            )
+
+    # Regla 5: mismo chequeo de solapamiento que la Regla 1, pero del lado
+    # del cliente. Un cliente no puede estar en dos citas a la vez aunque
+    # sean con profesionales distintos.
+    citas_del_cliente = db.scalars(
+        select(Cita).where(
+            Cita.cliente_id == datos.cliente_id,
+            Cita.estado.in_(ESTADOS_ACTIVOS),
+        )
+    )
+    for cita in citas_del_cliente:
+        if _se_solapan(datos.inicio, fin_nueva, cita.inicio, cita.fin):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"El cliente ya tiene una cita entre {cita.inicio} y {cita.fin}",
             )
 
     # Regla 2: la cita debe caber completa dentro del horario laboral.

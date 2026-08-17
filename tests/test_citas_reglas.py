@@ -183,14 +183,46 @@ def test_rechaza_duracion_no_multiplo_de_treinta(
     assert respuesta.status_code == 409
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_rechaza_cliente_con_dos_citas_simultaneas():
+def test_rechaza_cliente_con_dos_citas_simultaneas(
+    client, cliente_creado, profesional_creado, proximo_dia_laborable
+):
     """REGLA 5 - El cliente no puede estar en dos lugares a la vez.
 
     Dado un cliente con una cita activa de 9:00 a 9:30 con el profesional A,
     cuando intenta agendar de 9:15 a 9:45 con el profesional B,
     entonces la respuesta es 409.
     """
+    client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": proximo_dia_laborable.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+    profesional_b = client.post(
+        "/profesionales",
+        json={
+            "nombre": "Dra. Sofia Reyes",
+            "especialidad": "Fisioterapia",
+            "hora_inicio": "08:00:00",
+            "hora_fin": "17:00:00",
+        },
+    ).json()
+
+    inicio_solapado = proximo_dia_laborable + timedelta(minutes=15)
+    respuesta = client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_b["id"],
+            "inicio": inicio_solapado.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+
+    assert respuesta.status_code == 409
 
 
 def test_una_cita_cancelada_libera_el_espacio(
