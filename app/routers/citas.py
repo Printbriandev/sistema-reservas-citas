@@ -29,13 +29,19 @@ def validar_reglas_de_negocio(datos: schemas.CitaCrear, db: Session) -> None:
 
     Cada regla lanza HTTPException(409) con un mensaje explicativo.
 
-    TODO 4 - Duracion: debe ser multiplo de 30 minutos.
     TODO 5 - Cliente ocupado: el cliente no puede tener dos citas activas
              que se solapen entre si.
     """
     if datos.inicio < datetime.now():
         raise HTTPException(
             status.HTTP_409_CONFLICT, "No se puede agendar una cita en el pasado"
+        )
+
+    # Regla 4: el esquema ya acota 30-240 min (error 422 si se sale del rango);
+    # que sea multiplo de 30 es una regla de negocio, por eso va como 409.
+    if datos.duracion_min % 30 != 0:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "La duracion debe ser multiplo de 30 minutos"
         )
 
     fin_nueva = datos.inicio + timedelta(minutes=datos.duracion_min)

@@ -162,13 +162,25 @@ def test_rechaza_cita_en_el_pasado(
     assert respuesta.status_code == 409
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_rechaza_duracion_no_multiplo_de_treinta():
+def test_rechaza_duracion_no_multiplo_de_treinta(
+    client, cliente_creado, profesional_creado, proximo_dia_laborable
+):
     """REGLA 4 - La duracion debe ser multiplo de 30 minutos.
 
     Cuando se agenda una cita de 45 minutos,
     entonces la respuesta es 409.
     """
+    respuesta = client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": proximo_dia_laborable.isoformat(),
+            "duracion_min": 45,
+        },
+    )
+
+    assert respuesta.status_code == 409
 
 
 @pytest.mark.skip(reason=MOTIVO)
