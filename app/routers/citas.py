@@ -29,8 +29,6 @@ def validar_reglas_de_negocio(datos: schemas.CitaCrear, db: Session) -> None:
 
     Cada regla lanza HTTPException(409) con un mensaje explicativo.
 
-    TODO 2 - Horario laboral: la cita debe caber completa entre
-             profesional.hora_inicio y profesional.hora_fin.
     TODO 3 - Fecha pasada: no se permite reservar en el pasado.
     TODO 4 - Duracion: debe ser multiplo de 30 minutos.
     TODO 5 - Cliente ocupado: el cliente no puede tener dos citas activas
@@ -50,6 +48,17 @@ def validar_reglas_de_negocio(datos: schemas.CitaCrear, db: Session) -> None:
                 status.HTTP_409_CONFLICT,
                 f"El profesional ya tiene una cita entre {cita.inicio} y {cita.fin}",
             )
+
+    # Regla 2: la cita debe caber completa dentro del horario laboral.
+    # Se valida tanto el inicio como el fin: empezar dentro del horario
+    # no basta si la cita se extiende mas alla de la hora de cierre.
+    profesional = db.get(Profesional, datos.profesional_id)
+    if datos.inicio.time() < profesional.hora_inicio or fin_nueva.time() > profesional.hora_fin:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"La cita debe estar dentro del horario laboral "
+            f"({profesional.hora_inicio} - {profesional.hora_fin})",
+        )
 
 
 @router.post("", response_model=schemas.CitaLeer, status_code=status.HTTP_201_CREATED)

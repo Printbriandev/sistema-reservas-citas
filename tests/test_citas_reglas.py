@@ -94,24 +94,50 @@ def test_permite_cita_pegada_sin_solapar(
     assert respuesta.status_code == 201
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_rechaza_cita_fuera_del_horario_laboral():
+def test_rechaza_cita_fuera_del_horario_laboral(
+    client, cliente_creado, profesional_creado, proximo_dia_laborable
+):
     """REGLA 2 - La cita debe caber completa en el horario del profesional.
 
     Dado un profesional que atiende de 08:00 a 17:00,
     cuando se intenta agendar a las 07:00,
     entonces la respuesta es 409.
     """
+    antes_de_abrir = proximo_dia_laborable.replace(hour=7, minute=0)
+    respuesta = client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": antes_de_abrir.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+
+    assert respuesta.status_code == 409
 
 
-@pytest.mark.skip(reason=MOTIVO)
-def test_rechaza_cita_que_termina_despues_del_cierre():
+def test_rechaza_cita_que_termina_despues_del_cierre(
+    client, cliente_creado, profesional_creado, proximo_dia_laborable
+):
     """REGLA 2 (borde) - No basta con que empiece dentro del horario.
 
     Dado un profesional que cierra a las 17:00,
     cuando se agenda una cita de 16:45 con 30 minutos de duracion,
     entonces la respuesta es 409 porque terminaria a las 17:15.
     """
+    casi_al_cierre = proximo_dia_laborable.replace(hour=16, minute=45)
+    respuesta = client.post(
+        "/citas",
+        json={
+            "cliente_id": cliente_creado["id"],
+            "profesional_id": profesional_creado["id"],
+            "inicio": casi_al_cierre.isoformat(),
+            "duracion_min": 30,
+        },
+    )
+
+    assert respuesta.status_code == 409
 
 
 @pytest.mark.skip(reason=MOTIVO)
