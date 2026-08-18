@@ -23,20 +23,19 @@ Por eso: **congelar el repo primero, revisar todo, y entregar de último.**
 
 ## Orden de congelamiento
 
-1. [ ] Último commit y push del código. **Después de esto no se toca el repo.**
-2. [ ] Verificar que el repositorio **no está vacío** y que tiene commits reales
-       (repos vacíos = 0).
-3. [ ] Verificar que el repositorio está **abierto/público**. Un repo privado
-       compartido solo con dos correos es riesgoso: la regla pide que esté "abierto y
-       funcional". Si lo dejas privado, confirma que los dos correos entran.
-4. [ ] Verificar que el tablero (Jira / Azure DevOps) está accesible y tiene las 10
-       historias cargadas.
+1. [x] Repositorio creado y con commits reales — uno por cada regla de negocio
+       (`Printbriandev/sistema-reservas-citas`, público).
+2. [x] Tablero Jira creado, con las 4 épicas y las 10 historias (con story points y
+       criterios de aceptación) cargadas y accesibles.
+3. [x] Documento del proyecto redactado, formateado y exportado a PDF
+       (`docs/Proyecto-Final-Programacion-III.pdf`), con la conclusión personalizada.
+4. [ ] **Último commit y push del código.** Después de esto no se toca el repo — ver la
+       regla de arriba.
 5. [ ] Grabar el video y subirlo.
-6. [ ] Exportar el PDF final.
-7. [ ] Subir el PDF al **OneDrive de la cuenta institucional de ITLA Virtual**
+6. [ ] Subir el PDF final al **OneDrive de la cuenta institucional de ITLA Virtual**
        (no la cuenta personal).
-8. [ ] Pegar los links en **"Texto en línea"** de la plataforma.
-9. [ ] Oprimir **"Entregar"**. Sin esto la entrega no es oficial.
+7. [ ] Pegar los links en **"Texto en línea"** de la plataforma.
+8. [ ] Oprimir **"Entregar"**. Sin esto la entrega no es oficial.
 
 ---
 
@@ -58,7 +57,7 @@ Correos que deben tener acceso si algo queda restringido:
 ## Dónde va cada cosa
 
 | Entregable | Dónde |
-|---|---|
+
 | Documento PDF | OneDrive institucional de ITLA |
 | Links (repo, tablero, video, pruebas) | Campo **"Texto en línea"** de la plataforma |
 | Links dentro del PDF | ❌ **No.** La regla pide explícitamente no incluirlos ahí |
@@ -85,6 +84,7 @@ Correos que deben tener acceso si algo queda restringido:
 
 - Trabajo **individual**. No se permiten colaboraciones ni copias.
 - Plagio = 0.
-- Uso de IA no permitido = 0 **más** −10 puntos de la calificación final del curso.
+- La profesora confirmó por mensaje que el uso de IA está permitido, siempre que el
+  trabajo no muestre rastros de IA y sea defendible como propio (ver el video).
 - Entregas fuera de plazo no se aceptan bajo ninguna circunstancia.
 - Si los links no permiten el acceso, ese punto vale 0.
